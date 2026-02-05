@@ -4,17 +4,16 @@ import com.mojang.logging.LogUtils;
 import com.neutralboolean.taczbb.Config;
 import com.neutralboolean.taczbb.Main;
 import com.scarasol.tud.TudMod;
-import com.scarasol.tud.configuration.CommonConfig;
 import com.scarasol.tud.manager.AmmoManager;
 import com.tacz.guns.api.item.builder.AmmoItemBuilder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.common.Tags;
 import org.slf4j.Logger;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class DropUtil {
     private static DropUtil instance = null;
@@ -57,13 +56,18 @@ public class DropUtil {
         ResourceLocation ammoLoc = Objects.requireNonNull(AmmoManager.getAmmo(weapon),
                         "Successfully made IGun but couldn't retrieve ammo for Item that should be a gun.")
                 .getA();
-        LOGGER.warn(CommonConfig.TYPE_TO_AMMO.get().toString());
-        LOGGER.info(ammoLoc.toString());
 
+        double bossMult = 1.0;
+        if (Config.shouldBossesDropMore) {
+            if (victim.getType().is(Tags.EntityTypes.BOSSES)) {
+                bossMult = Config.bossAmmoBuff;
+            }
+        }
         List<ItemEntity> ammoDrop = new ArrayList<>();
 
         // dropCount between the min and max count for killing weapon
-        int dropCount = getAmmoDropCount(ammoLoc.getPath());
+        int dropCount = Double.valueOf(getAmmoDropCount(ammoLoc.getPath()) * bossMult).intValue();
+
         if (dropCount != 0) {
             // should I retain the stacksize normalization for ammo drops?
             // yes: the maximum amount the config allows is 256, so it should make sure that it doesn't exceed stacksize.
@@ -76,10 +80,18 @@ public class DropUtil {
     public Set<ItemEntity> produceAuxAmmoDrop(int size, final ResourceLocation avoid, final LivingEntity victim) {
         var auxAmmoResources = giveAuxAmmoDrops(size, avoid);
         Set<ItemEntity> auxAmmoDrops = new HashSet<>();
+
+        double bossMult = 1.0;
+        if (Config.shouldBossesDropMore) {
+            if (victim.getType().is(Tags.EntityTypes.BOSSES)) {
+                bossMult = Config.bossAmmoBuff;
+            }
+        }
+
         for (ResourceLocation resourceLocation : auxAmmoResources) {
             var rawDropCount = getAmmoDropCount(resourceLocation.getPath());
             var ratedDropCount = Math.round(rawDropCount * Config.auxAmmoDropRate);
-            int dropCount = Long.valueOf(ratedDropCount).intValue();
+            int dropCount = Double.valueOf(Long.valueOf(ratedDropCount).doubleValue() * bossMult).intValue();
             LOGGER.debug("Aux ammo dropped: {} {} rounds", dropCount, resourceLocation.getPath());
             prepAmmoStack(AmmoItemBuilder.create().setId(resourceLocation).build(), dropCount, victim, auxAmmoDrops);
         }

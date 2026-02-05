@@ -75,11 +75,11 @@ public class Config {
             BUILDER.comment("How much fewer aux ammo should drop than normal ammo. '1.0' means at equal rates to normal ammo.")
                     .defineInRange("auxAmmoDropChance", 0.85, 0.0, 1.0);
     private static final ForgeConfigSpec.BooleanValue SHOULD_BOSS_DROP_MORE =
-            BUILDER.comment("Whether bosses (entities with the entity tag '#forge:bosses') should drop more ammo.")
+            BUILDER.comment("Whether bosses (entities with the entity tag '#forge:bosses' or '#c:bosses') should drop more ammo.")
                     .define("shouldBossesDropMore", true);
     private static final ForgeConfigSpec.DoubleValue BOSS_AMMO_DROP_BUFF =
             BUILDER.comment("The percentage chance that auxiliary ammo drops after normal ammo drops.")
-                    .defineInRange("bossAmmoBuff", 3.0, 1.0, 256.0);
+                    .defineInRange("bossAmmoBuff", 6.0, 1.0, 256.0);
 
     static final ForgeConfigSpec SPEC = BUILDER.build();
 
