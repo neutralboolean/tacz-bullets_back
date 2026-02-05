@@ -11,7 +11,7 @@ import java.util.Map;
 
 // An example config class. This is not required, but it's a good idea to have one to keep your config organized.
 // Demonstrates how to use Forge's config APIs
-@Mod.EventBusSubscriber(modid = Main.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(modid = BBMain.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class Config {
     private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
 
@@ -96,12 +96,12 @@ public class Config {
 
     @SubscribeEvent
     static void onLoad(final ModConfigEvent event) {
-        minMaxAmmoMap.putIfAbsent(Main.PISTOL_TYPE, syncSensibly(MIN_PISTOL_AMMO.get(), MAX_PISTOL_AMMO.get()));
-        minMaxAmmoMap.putIfAbsent(Main.RIFLE_TYPE, syncSensibly(MIN_RIFLE_AMMO.get(), MAX_RIFLE_AMMO.get()));
-        minMaxAmmoMap.putIfAbsent(Main.SHOTGUN_TYPE, syncSensibly(MIN_SHOTGUN_AMMO.get(), MAX_SHOTGUN_AMMO.get()));
-        minMaxAmmoMap.putIfAbsent(Main.SNIPER_TYPE, syncSensibly(MIN_SNIPER_AMMO.get(), MAX_SNIPER_AMMO.get()));
-        minMaxAmmoMap.putIfAbsent(Main.BARREL_TYPE, syncSensibly(MIN_BARREL_AMMO.get(), MAX_BARREL_AMMO.get()));
-        minMaxAmmoMap.putIfAbsent(Main.FUEL_TYPE, syncSensibly(MIN_FUEL_AMMO.get(), MAX_FUEL_AMMO.get()));
+        minMaxAmmoMap.putIfAbsent(BBMain.PISTOL_TYPE, syncSensibly(MIN_PISTOL_AMMO.get(), MAX_PISTOL_AMMO.get()));
+        minMaxAmmoMap.putIfAbsent(BBMain.RIFLE_TYPE, syncSensibly(MIN_RIFLE_AMMO.get(), MAX_RIFLE_AMMO.get()));
+        minMaxAmmoMap.putIfAbsent(BBMain.SHOTGUN_TYPE, syncSensibly(MIN_SHOTGUN_AMMO.get(), MAX_SHOTGUN_AMMO.get()));
+        minMaxAmmoMap.putIfAbsent(BBMain.SNIPER_TYPE, syncSensibly(MIN_SNIPER_AMMO.get(), MAX_SNIPER_AMMO.get()));
+        minMaxAmmoMap.putIfAbsent(BBMain.BARREL_TYPE, syncSensibly(MIN_BARREL_AMMO.get(), MAX_BARREL_AMMO.get()));
+        minMaxAmmoMap.putIfAbsent(BBMain.FUEL_TYPE, syncSensibly(MIN_FUEL_AMMO.get(), MAX_FUEL_AMMO.get()));
 
         ammoDropChance = AMMO_DROP_CHANCE.get();
         shouldDropAuxAmmo = SHOULD_DROP_AUX_AMMO.get();

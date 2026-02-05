@@ -6,33 +6,32 @@ import com.scarasol.tud.manager.AmmoManager;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.resource.index.CommonGunIndex;
-import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.*;
+import net.minecraft.world.phys.AABB;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 
 import java.util.*;
 
 // The value here should match an entry in the META-INF/mods.toml file
-@Mod(Main.MODID)
-public class Main {
+@Mod(BBMain.MODID)
+public class BBMain {
     // Define mod id in a common place for everything to reference
     public static final String MODID = "taczbb";
     // Directly reference a slf4j logger
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static final double KILL_ASSIST_RANGE = 100.0;
 
     public static String PISTOL_TYPE = "pistol";
     public static String RIFLE_TYPE = "rifle";
@@ -43,9 +42,8 @@ public class Main {
 
     private DropUtil dropUtil;
 
-    public Main() {
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-
+    public BBMain(FMLJavaModLoadingContext context) {
+//        IEventBus modEventBus = context.getModEventBus();
         // Register the commonSetup method for modloading
 //        modEventBus.addListener(this::commonSetup);
 
@@ -53,13 +51,8 @@ public class Main {
         MinecraftForge.EVENT_BUS.register(this);
 
         // Register our mod's ForgeConfigSpec so that Forge can create and load the config file for us
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        context.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
-
-//    private void commonSetup(final FMLCommonSetupEvent event) {
-//        // Some common setup code
-//        LOGGER.info("HELLO FROM COMMON SETUP");
-//    }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
@@ -89,14 +82,25 @@ public class Main {
             var IGUN = IGun.getIGunOrNull(weapon);
             if (IGUN != null) {
                 var victim = event.getEntity();
-//                var gunId = IGUN.getGunId(weapon);
+
+                double killAssistCount;  // counting combat active players near the killed mob
+
+                // WARNING: accessing `victim.level()` through a try-with-resources autocloses the active Server level
+                // This, understandably, shits the whole bed. Don't do try-with-resources on Level.
+                killAssistCount = victim.level()
+                        .getNearbyPlayers(TargetingConditions.DEFAULT, victim,
+                                AABB.ofSize(victim.getPosition(1.0f),
+                                        KILL_ASSIST_RANGE, KILL_ASSIST_RANGE, KILL_ASSIST_RANGE))
+                        .size()-1;
+                // defense against scenarios where 1 player kills a non-hostile mob alone: puts the count into negative
+                killAssistCount = Math.max(0.0, killAssistCount);
 
                 // dropRate is variable, from config
                 if (!dropUtil.doCheck(Config.ammoDropChance)) {
                     return; //skip the rest
                 }
 
-                var droppedAmmoSet = dropUtil.produceAmmoDrop(weapon, victim);
+                var droppedAmmoSet = dropUtil.produceAmmoDrop(killAssistCount, weapon, victim);
                 for (ItemEntity droppedAmmo : droppedAmmoSet) {
                     event.getDrops().add(droppedAmmo);
                 }
@@ -109,6 +113,7 @@ public class Main {
 
                 var auxDroppedAmmoSet =
                         dropUtil.produceAuxAmmoDrop(
+                                killAssistCount,
                                 Config.auxAmmoSpread,
                                 Objects.requireNonNull(AmmoManager.getAmmo(weapon))
                                         .getA(),
