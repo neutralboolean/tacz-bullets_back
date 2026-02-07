@@ -52,26 +52,31 @@ public class DropUtil {
         return generator.nextDouble() <= percentage;
     }
 
-    public List<ItemEntity> produceAmmoDrop(double numAssistingPlayers, final ItemStack weapon, final LivingEntity victim) {
+    public List<ItemEntity> produceAmmoDrop(boolean doBossScaling,
+                                            double numAssistingPlayers,
+                                            final ItemStack weapon,
+                                            final LivingEntity victim) {
         ResourceLocation ammoLoc = Objects.requireNonNull(AmmoManager.getAmmo(weapon),
                         "Successfully made IGun but couldn't retrieve ammo for Item that should be a gun.")
                 .getA();
 
         double bossMult = 1.0;
-        if (Config.shouldBossesDropMore) {
-            if (victim.getType().is(Tags.EntityTypes.BOSSES)) {
-                bossMult = Config.bossAmmoBuff;
-            }
-        }
-        List<ItemEntity> ammoDrop = new ArrayList<>();
-        // dropCount between the min and max count for killing weapon
         Double dropCount = 0.0;
         try {
-            dropCount = Math.ceil(getAmmoDropCount(ammoLoc.getPath()) * bossMult * giveAssistAmmoScaling(numAssistingPlayers));
+            if (doBossScaling) {
+                // bosses drop max ammo for weapon type before any scaling
+                dropCount = Math.ceil(getAmmoDropCount(ammoLoc.getPath(), true)
+                        * Config.bossAmmoBuff
+                        * giveAssistAmmoScaling(numAssistingPlayers));
+            } else {
+                // dropCount between the min and max count for killing weapon
+                dropCount = Math.ceil(getAmmoDropCount(ammoLoc.getPath()) * bossMult * giveAssistAmmoScaling(numAssistingPlayers));
+            }
         } catch (NoSuchElementException nsee) {
             LOGGER.error("Failed to get ammo drop count...", nsee);
         }
 
+        List<ItemEntity> ammoDrop = new ArrayList<>();
         if (dropCount != 0) {
             // should I retain the stacksize normalization for ammo drops?
             // yes: the maximum amount the config allows is 256, so it should make sure that it doesn't exceed stacksize.
@@ -82,7 +87,8 @@ public class DropUtil {
         return ammoDrop;
     }
 
-    public Set<ItemEntity> produceAuxAmmoDrop(double numAssistingPlayers,
+    public Set<ItemEntity> produceAuxAmmoDrop(boolean doBossScaling,
+                                              double numAssistingPlayers,
                                               int size,
                                               final ResourceLocation avoid,
                                               final LivingEntity victim) {
@@ -90,16 +96,19 @@ public class DropUtil {
         Set<ItemEntity> auxAmmoDrops = new HashSet<>();
 
         double bossMult = 1.0;
-        if (Config.shouldBossesDropMore) {
-            if (victim.getType().is(Tags.EntityTypes.BOSSES)) {
-                bossMult = Config.bossAmmoBuff;
-            }
+        if (doBossScaling) {
+            bossMult = Config.bossAmmoBuff; // only done here because it'd keep getting assigned in the loop
         }
 
         for (ResourceLocation resourceLocation : auxAmmoResources) {
             int baseDropCount = 0;
             try {
-                baseDropCount = getAmmoDropCount(resourceLocation.getPath());
+                if (doBossScaling) {
+                    // bosses drop max ammo for weapon type before any scaling
+                    baseDropCount = getAmmoDropCount(resourceLocation.getPath(), true);
+                } else {
+                    baseDropCount = getAmmoDropCount(resourceLocation.getPath());
+                }
             } catch (NoSuchElementException nsee) {
                 LOGGER.error("Failed to get ammo drop count...", nsee);
             }
@@ -156,14 +165,25 @@ public class DropUtil {
     }
 
     public int getAmmoDropCount(String ammoType) throws NoSuchElementException {
+        return getAmmoDropCount(ammoType, false);
+    }
+
+    public int getAmmoDropCount(String ammoType, boolean beMaxed) throws NoSuchElementException {
         var minMaxAmmoCountTuple = Config.minMaxAmmoMap.get(ammoType);
         if (minMaxAmmoCountTuple == null) {
             throw new NoSuchElementException("No such gun/ammo type.");
         }
 
-        int minAmmo = minMaxAmmoCountTuple.getA();
-        int maxAmmo = minMaxAmmoCountTuple.getB();
-        return generator.nextInt(minAmmo, maxAmmo+1);
+        int amount = 0;
+        if (beMaxed) {
+            amount = minMaxAmmoCountTuple.getB();
+        } else {
+            int minAmmo = minMaxAmmoCountTuple.getA();
+            int maxAmmo = minMaxAmmoCountTuple.getB();
+            amount = generator.nextInt(minAmmo, maxAmmo+1);
+        }
+
+        return amount;
     }
 
     private double giveAssistAmmoScaling(double numAssistingPlayers) {

@@ -13,6 +13,7 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.Tags;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -43,6 +44,7 @@ public class BBMain {
     private DropUtil dropUtil;
 
     public BBMain(FMLJavaModLoadingContext context) {
+        //@Deprecated: TODO remove next version
 //        IEventBus modEventBus = context.getModEventBus();
         // Register the commonSetup method for modloading
 //        modEventBus.addListener(this::commonSetup);
@@ -95,12 +97,15 @@ public class BBMain {
                 // defense against scenarios where 1 player kills a non-hostile mob alone: puts the count into negative
                 killAssistCount = Math.max(0.0, killAssistCount);
 
-                // dropRate is variable, from config
-                if (!dropUtil.doCheck(Config.ammoDropChance)) {
+                boolean doBossScaling = false;
+                // bosses always drop ammo. otherwise dropRate is variable, from config
+                if (Config.shouldBossesDropMore && victim.getType().is(Tags.EntityTypes.BOSSES)) {
+                    doBossScaling = true;
+                } else if (!dropUtil.doCheck(Config.ammoDropChance)) {
                     return; //skip the rest
                 }
 
-                var droppedAmmoSet = dropUtil.produceAmmoDrop(killAssistCount, weapon, victim);
+                var droppedAmmoSet = dropUtil.produceAmmoDrop(doBossScaling, killAssistCount, weapon, victim);
                 for (ItemEntity droppedAmmo : droppedAmmoSet) {
                     event.getDrops().add(droppedAmmo);
                 }
@@ -113,6 +118,7 @@ public class BBMain {
 
                 var auxDroppedAmmoSet =
                         dropUtil.produceAuxAmmoDrop(
+                                doBossScaling,
                                 killAssistCount,
                                 Config.auxAmmoSpread,
                                 Objects.requireNonNull(AmmoManager.getAmmo(weapon))
